@@ -1,0 +1,135 @@
+---
+title: "20mins"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+Clear 
+```{r}
+rm(list = ls())
+```
+
+
+```{r setup}
+#install.packages("remotes")
+#Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = "true")
+#remotes::install_github("orange-vertex/rdepthmap")
+#library(maptools)
+library(devtools)
+library(dplyr)
+library(tidyverse)
+library(sjmisc)
+library(seqHMM) 
+library(ggplot2)
+library(spatstat)
+library(reshape2)
+library(conflicted)
+```
+
+
+Prepare Data
+```{r}
+data = read.csv("Data/Combined.csv") 
+
+d1 = data %>% select(Name,GPR,park_min_d,park_dista,hawk_min_d,hawk_dista,poly_min_d,poly_dista,reta_min_d,reta_dista,schp_min_d,schp_dista,schs_min_d,schs_dista,scht_min_d,scht_dista)
+
+d2 = d1 %>% mutate(parks = park_min_d + park_dista) %>%
+  mutate(hawkercentre = hawk_min_d + hawk_dista) %>%
+  mutate(polyclinic = poly_min_d + poly_dista) %>%
+  mutate(retailshops = reta_min_d + reta_dista) %>%
+  mutate(school_pri = schp_min_d + schp_dista) %>%
+  mutate(school_sec = schs_min_d + schs_dista) %>%
+  mutate(school_ter = scht_min_d + scht_dista) %>%
+  select(Name,parks,hawkercentre,polyclinic,retailshops,school_pri,school_sec,school_ter)
+```
+
+Scatter Plot
+```{r}
+tiff(filename="OutputGraphs/X_Scatter.tiff", width=7, height=5, units="in",
+     pointsize=4, compression="lzw", bg="white", res=1200,
+     restoreConsole=TRUE)
+
+DAT.melt = melt(d2,id=c("Name"))
+ggplot(DAT.melt, aes(x=variable,y=value) ) + geom_point(shape=1,size=4)  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_hline(yintercept=1600, linetype="dashed", color = "red") + ggtitle("Distance to Amenity") +
+  xlab("Amenity") + ylab("Distance")
+
+dev.off()
+```
+
+Scatter Plot with Color
+```{r}
+tiff(filename="OutputGraphs/1_Scatter with Color.tiff", width=7, height=9, units="in",
+     pointsize=4, compression="lzw", bg="white", res=1200,
+     restoreConsole=TRUE)
+
+d2 = d1 %>% mutate(parks = park_min_d + park_dista) %>%
+  mutate(hawkercentre = hawk_min_d + hawk_dista) %>%
+  mutate(polyclinic = poly_min_d + poly_dista) %>%
+  mutate(retailshops = reta_min_d + reta_dista) %>%
+  mutate(school_pri = schp_min_d + schp_dista) %>%
+  mutate(school_sec = schs_min_d + schs_dista) %>%
+  mutate(school_ter = scht_min_d + scht_dista) %>%
+  mutate(GPR = ifelse(GPR == "LND", "LND","nonLND")) %>%
+  select(Name,GPR,parks,hawkercentre,polyclinic,retailshops,school_pri,school_sec,school_ter)
+
+DAT.melt = melt(d2,id=c("Name","GPR"))
+
+ggplot(DAT.melt, aes(x=variable,y=value,color=GPR) ) + geom_point(shape=1,size=4)  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_hline(yintercept=1600, linetype="dashed", color = "red") + ggtitle("Distance to Amenity (coloured)") +
+  xlab("Amenity") + ylab("Distance")
+
+dev.off()
+```
+
+```{r}
+conflict_prefer("filter", "dplyr")
+
+d2_LND = d1 %>% mutate(parks = park_min_d + park_dista) %>%
+  mutate(hawkercentre = hawk_min_d + hawk_dista) %>%
+  mutate(polyclinic = poly_min_d + poly_dista) %>%
+  mutate(retailshops = reta_min_d + reta_dista) %>%
+  mutate(school_pri = schp_min_d + schp_dista) %>%
+  mutate(school_sec = schs_min_d + schs_dista) %>%
+  mutate(school_ter = scht_min_d + scht_dista) %>%
+  filter(GPR == "LND") %>%
+  select(Name,parks,hawkercentre,polyclinic,retailshops,school_pri,school_sec,school_ter)
+
+d2_NONLND = d1 %>% mutate(parks = park_min_d + park_dista) %>%
+  mutate(hawkercentre = hawk_min_d + hawk_dista) %>%
+  mutate(polyclinic = poly_min_d + poly_dista) %>%
+  mutate(retailshops = reta_min_d + reta_dista) %>%
+  mutate(school_pri = schp_min_d + schp_dista) %>%
+  mutate(school_sec = schs_min_d + schs_dista) %>%
+  mutate(school_ter = scht_min_d + scht_dista) %>%
+  filter(GPR != "LND") %>%
+  select(Name,parks,hawkercentre,polyclinic,retailshops,school_pri,school_sec,school_ter)
+```
+
+Scatter for Landed
+```{r}
+tiff(filename="OutputGraphs/2_LND.tiff", width=7, height=9, units="in",
+     pointsize=4, compression="lzw", bg="white", res=1200,
+     restoreConsole=TRUE)
+
+DAT.melt = melt(d2_LND,id=c("Name"))
+ggplot(DAT.melt, aes(x=variable,y=value) ) + geom_point(shape=1,size=4,color='#F8766D')  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_hline(yintercept=1600, linetype="dashed", color = "red")+ ggtitle("[Landed] Distance to Amenity") +
+  xlab("Amenity") + ylab("Distance")
+
+dev.off()
+```
+
+Scatter for Non Landed
+```{r}
+tiff(filename="OutputGraphs/3_NONLND.tiff", width=7, height=9, units="in",
+     pointsize=4, compression="lzw", bg="white", res=1200,
+     restoreConsole=TRUE)
+
+DAT.melt = melt(d2_NONLND,id=c("Name"))
+ggplot(DAT.melt, aes(x=variable,y=value) ) + geom_point(shape=1,size=4,color="#00BFC4")  + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + geom_hline(yintercept=1600, linetype="dashed", color = "red")+ ggtitle("[Non-Landed] Distance to Amenity") +
+  xlab("Amenity") + ylab("Distance")
+
+
+dev.off()
+```
+
